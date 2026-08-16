@@ -1,4 +1,4 @@
-# imgw-hydro-tools
+# hydro-tools
 
 Python tools for parsing, cleaning and validating hydrological data published by [IMGW-PIB](https://danepubliczne.imgw.pl/) (the Polish Institute of Meteorology and Water Management).
 
@@ -11,8 +11,8 @@ The tools use IMGW-PIB column names by default, while allowing custom column map
 Clone the repository and install in editable mode:
 
 ```bash
-git clone https://github.com/teempe/imgw-hydro-tools.git
-cd imgw-hydro-tools
+git clone https://github.com/teempe/hydro-tools.git
+cd hydro-tools
 pip install -e .
 ```
 
