@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from imgw_hydro_tools.data import hydro_to_calendar_date
+from imgw_hydro_tools.date import hydro_to_calendar_date
 
 
 def test_january_stays_same_year():
