@@ -4,9 +4,9 @@ import pandas as pd
 
 def hydro_to_calendar_date(df: pd.DataFrame,
                            *,
-                           hydro_year_col: str = "MCROKH", 
-                           month_col: str = "MCMSCK", 
-                           day_col: str = "MCDZIK", 
+                           hydro_year_col: str = "COROKH", 
+                           month_col: str = "COMSCK", 
+                           day_col: str = "CODZIEN", 
                            errors: Literal["raise", "coerce"] = "raise") -> pd.Series:
     """Convert hydrological-year date columns into calendar dates.
  
@@ -18,7 +18,7 @@ def hydro_to_calendar_date(df: pd.DataFrame,
     The year, month and day columns are expected to contain numeric date 
     components.
 
-    The default column names (``MCROKH``, ``MCMSCK``, ``MCDZIK``) follow the
+    The default column names (``COROKH``, ``COMSCK``, ``CODZIEN``) follow the
     official IMGW-PIB data format for hydrological monthly observations, so the
     function works out of the box on raw IMGW data. Pass the corresponding
     arguments to use it with differently named columns.
@@ -27,11 +27,11 @@ def hydro_to_calendar_date(df: pd.DataFrame,
     ----------
     df : pandas.DataFrame
         Input data containing the year, month and day columns.
-    hydro_year_col : str, default "MCROKH"
+    hydro_year_col : str, default "COROKH"
         Name of the column holding the hydrological year.
-    month_col : str, default "MCMSCK"
+    month_col : str, default "COMSCK"
         Name of the column holding the calendar month (1-12).
-    day_col : str, default "MCDZIK"
+    day_col : str, default "CODZIEN"
         Name of the column holding the calendar day.
     errors : {"raise", "coerce"}, default "raise"
         Passed through to :func:`pandas.to_datetime`. With ``"coerce"``,
@@ -53,7 +53,7 @@ def hydro_to_calendar_date(df: pd.DataFrame,
     Examples
     --------
     >>> import pandas as pd
-    >>> df = pd.DataFrame({"MCROKH": [2024], "MCMSCK": [11], "MCDZIK": [1]})
+    >>> df = pd.DataFrame({"COROKH": [2024], "COMSCK": [11], "CODZIEN": [1]})
     >>> hydro_to_calendar_date(df).iloc[0]
     Timestamp('2023-11-01 00:00:00')
     """
