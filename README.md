@@ -1,10 +1,30 @@
 # hydro-tools
 
-Python tools for parsing, cleaning and validating hydrological data published by [IMGW-PIB](https://danepubliczne.imgw.pl/) (the Polish Institute of Meteorology and Water Management).
+Python tools for reading and processing hydrological data published by [IMGW-PIB](https://danepubliczne.imgw.pl/) (the Polish Institute of Meteorology and Water Management).
 
-The tools use IMGW-PIB column names by default, while allowing custom column mappings for other datasets.
+The reader currently targets the IMGW-PIB hydrological data format. Hydrological date conversion can also be used with custom column names.
 
-> **Status:** early development (0.1). The first building block — hydrological-to-calendar date conversion — is in place and covered by automated tests. Parsing, completeness checks and multi-year statistics are planned.
+> **Status:** early development (0.2.0). Reading and parsing IMGW hydrological CSV files and hydrological-to-calendar date conversion are implemented and covered by automated tests. Data validation, completeness checks and multi-year workflows are planned.
+
+## Features
+
+Currently implemented:
+
+- reading standard IMGW hydrological CSV files
+- automatic character encoding detection
+- automatic CSV delimiter detection
+- support for nested IMGW CSV files
+- assignment of IMGW column names
+- extraction of river/lake codes from water-body names
+- conversion of numeric IMGW columns
+- hydrological-year to calendar-date conversion
+
+Planned:
+
+- data validation
+- handling missing-value and sentinel conventions
+- completeness checks
+- multi-year workflows
 
 ## Installation
 
@@ -16,7 +36,7 @@ cd hydro-tools
 pip install -e .
 ```
 
-For development (including the test suite):
+For development, including the test suite:
 
 ```bash
 pip install -e ".[dev]"
@@ -24,27 +44,52 @@ pip install -e ".[dev]"
 
 ## Quick start
 
-Convert hydrological-year date columns into calendar dates. In the Polish hydrological calendar the year starts on 1 November, so November and December of hydrological year *Y* fall in calendar year *Y − 1* — the function handles this rule automatically.
+### Reading IMGW data
 
 ```python
-import pandas as pd
-from imgw_hydro_tools.date import hydro_to_calendar_date
+from imgw_hydro_tools.reader import read_imgw_data
 
-df = pd.DataFrame({
-    "MCROKH": [2024, 2024, 2024],   # hydrological year
-    "MCMSCK": [10, 11, 1],          # calendar month
-    "MCDZIK": [31, 1, 15],          # calendar day
-})
+df = read_imgw_data("data/codz_2024.csv")
 
-df["date"] = hydro_to_calendar_date(df)
-print(df["date"].tolist())
-# [Timestamp('2024-10-31'), Timestamp('2023-11-01'), Timestamp('2024-01-15')]
+print(df.head())
 ```
 
-The default column names (`MCROKH`, `MCMSCK`, `MCDZIK`) follow the IMGW-PIB format. For other data, pass the column names explicitly:
+The reader automatically detects the file encoding and CSV delimiter. An encoding can also be supplied explicitly:
 
 ```python
-hydro_to_calendar_date(df, hydro_year_col="year", month_col="month", day_col="day")
+df = read_imgw_data(
+    "data/codz_2024.csv",
+    encoding="cp1250",
+)
+```
+
+The returned DataFrame uses IMGW column names, extracts the river/lake code into `KDKRZK`, and converts numeric IMGW columns to numeric types.
+
+### Converting hydrological dates
+
+In the Polish hydrological calendar, the year starts on 1 November. November and December of hydrological year *Y* therefore fall in calendar year *Y - 1*.
+
+```python
+from imgw_hydro_tools.date import hydro_to_calendar_date
+
+df["date"] = hydro_to_calendar_date(df)
+```
+
+By default, the function uses the IMGW columns:
+
+- `COROKH` — hydrological year
+- `COMSCK` — calendar month
+- `CODZIEN` — calendar day
+
+Custom column names can also be supplied:
+
+```python
+df["date"] = hydro_to_calendar_date(
+    df,
+    hydro_year_col="hydro_year",
+    month_col="month",
+    day_col="day",
+)
 ```
 
 ## Development
@@ -57,7 +102,14 @@ pytest
 
 ## Requirements
 
-Python ≥ 3.10 · pandas
+- Python >= 3.10
+- pandas >= 2.0
+- charset-normalizer >= 3.0
+
+Development dependencies additionally include:
+
+- pytest >= 7.0
+- pytest-mock >= 3.0
 
 ## License
 
