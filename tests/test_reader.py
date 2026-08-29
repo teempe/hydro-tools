@@ -1,252 +1,273 @@
 import pytest
-import numpy as np
 import pandas as pd
-from pandas.api.types import is_numeric_dtype
 
 from imgw_hydro_tools import reader
 
 
-###############################################################################
-## PARSING CSV TO DATAFRAME
-###############################################################################
-
-# fixtures
 @pytest.fixture
-def typical_csv_comma_cp1250(tmp_path):
+def csv_comma_cp1250(tmp_path):
     content = (
-        "150170040,OŁAWA,Odra (1),2023,01,01,185,99999.999,99.9,11\n"
-        "150170040,OŁAWA,Odra (1),2023,01,02,188,99999.999,99.9,11\n"
-        "150170040,OŁAWA,Odra (1),2023,01,03,188,99999.999,99.9,11\n"
-        "149180020,CHAŁUPKI,Odra (1),2024,01,01,113,25.400,,11\n"
-        "149180020,CHAŁUPKI,Odra (1),2024,01,02,109,23.300,,11\n"
-        "149180020,CHAŁUPKI,Odra (1),2024,01,03,120,30.000,,11\n")
-    csv_path = tmp_path / "data.csv"
-    csv_path.write_text(content, encoding="cp1250")
-
-    return csv_path
+        "150190340,KRAKÓW-BIELANY,Wisła (2),2023,09,01,9999,99999.999,99.9,07\n"
+        "150190340,KRAKÓW-BIELANY,Wisła 2,2023,09,02,NULL,NULL,NULL,07\n"
+        "150190340,KRAKÓW-BIELANY,Wisła (),2023,09,03,,,,07\n"
+        "150190340,KRAKÓW-BIELANY,Wisła,2023,09,04,150,200,19,07\n")
+    csv_comma_cp1250 = tmp_path / "data.csv"
+    csv_comma_cp1250.write_text(content, encoding="cp1250")
+    return csv_comma_cp1250
 
 
 @pytest.fixture
-def typical_csv_semicolon_utf8(tmp_path):
+def csv_semicolon_utf8(tmp_path):
     content = (
-        "150170040;OŁAWA;Odra (1);2023;01;01;185;99999.999;99.9;11\n"
-        "150170040;OŁAWA;Odra (1);2023;01;02;188;99999.999;99.9;11\n"
-        "150170040;OŁAWA;Odra (1);2023;01;03;188;99999.999;99.9;11\n"
-        "149180020;CHAŁUPKI;Odra (1);2024;01;01;113;25.400;;11\n"
-        "149180020;CHAŁUPKI;Odra (1);2024;01;02;109;23.300;;11\n"
-        "149180020;CHAŁUPKI;Odra (1);2024;01;03;120;30.000;;11\n")
-    csv_path = tmp_path / "data.csv"
-    csv_path.write_text(content, encoding="utf-8")
-
-    return csv_path
+        "150190340;KRAKÓW-BIELANY;Wisła (2);2023;09;01;9999;99999.999;99.9;07\n"
+        "150190340;KRAKÓW-BIELANY;Wisła 2;2023;09;02;NULL;NULL;NULL;07\n"
+        "150190340;KRAKÓW-BIELANY;Wisła ();2023;09;03;;;;07\n"
+        "150190340;KRAKÓW-BIELANY;Wisła;2023;09;04;150;200;19;07\n")
+    csv_semicolon_utf8 = tmp_path / "data.csv"
+    csv_semicolon_utf8.write_text(content, encoding="utf-8")
+    return csv_semicolon_utf8
 
 
 @pytest.fixture
-def nested_csv_comma_cp1250(tmp_path):
+def csv_comma_cp1250_nested(tmp_path):
     content = (
-        '"150170040,OŁAWA,Odra (1),2023,01,01,185,99999.999,99.9,11"\n'
-        '"150170040,OŁAWA,Odra (1),2023,01,02,188,99999.999,99.9,11"\n'
-        '"150170040,OŁAWA,Odra (1),2023,01,03,188,99999.999,99.9,11"\n'
-        '"149180020,CHAŁUPKI,Odra (1),2024,01,01,113,25.400,,11"\n'
-        '"149180020,CHAŁUPKI,Odra (1),2024,01,02,109,23.300,,11"\n'
-        '"149180020,CHAŁUPKI,Odra (1),2024,01,03,120,30.000,,11"\n')
-    csv_path = tmp_path / "data.csv"
-    csv_path.write_text(content, encoding="cp1250")
-
-    return csv_path
+        '"150190340,KRAKÓW-BIELANY,Wisła (2),2023,09,01,9999,99999.999,99.9,07"\n'
+        '"150190340,KRAKÓW-BIELANY,Wisła 2,2023,09,02,NULL,NULL,NULL,07"\n'
+        '"150190340,KRAKÓW-BIELANY,Wisła (),2023,09,03,,,,07"\n'
+        '"150190340,KRAKÓW-BIELANY,Wisła,2023,09,04,150,200,19,07"\n')
+    csv_comma_cp1250_nested = tmp_path / "data.csv"
+    csv_comma_cp1250_nested.write_text(content, encoding="cp1250")
+    return csv_comma_cp1250_nested
 
 
 @pytest.fixture
-def expected_result():
-    expected_df =  pd.DataFrame([
-            ["150170040", "OŁAWA", "Odra", 2023, 1, 1, 185, 99999.999, 99.9, 11, "1"],
-            ["150170040", "OŁAWA", "Odra", 2023, 1, 2, 188, 99999.999, 99.9, 11, "1"],
-            ["150170040", "OŁAWA", "Odra", 2023, 1, 3, 188, 99999.999, 99.9, 11, "1"],
-            ["149180020", "CHAŁUPKI", "Odra", 2024, 1, 1, 113, 25.400, pd.NA, 11, "1"],
-            ["149180020", "CHAŁUPKI", "Odra", 2024, 1, 2, 109, 23.300, pd.NA, 11, "1"],
-            ["149180020", "CHAŁUPKI", "Odra", 2024, 1, 3, 120, 30.000, pd.NA, 11, "1"]
-        ],
-        columns=["PSKDSZS", "PSNZWP", "KDNRZK", "COROKH", "COMSCH", "CODZIEN", "COSTAN", "COPRZP", "COPTMP", "COMSCK", "KDKRZK"]
-    )
-    return expected_df
-
-
-# _get_encoding tests
-def test_get_encoding_raises_value_error_when_encoding_cannot_be_determined(tmp_path, mocker):
-    file_content = b"any test content"
-    source_path = tmp_path / "data.csv"
-    source_path.write_bytes(file_content)
-
-    mock_from_bytes = mocker.patch("imgw_hydro_tools.reader.from_bytes")
-    mock_from_bytes.return_value.best.return_value = None
-
-    with pytest.raises(ValueError, match="Could not detect encoding"):
-        reader._get_encoding(source_path)
-
-    mock_from_bytes.assert_called_once_with(file_content)
-
-
-def test_get_encoding_returns_detected_encoding(tmp_path, mocker):
-    file_content = b"any test content"
-    source_path = tmp_path / "data.csv"
-    source_path.write_bytes(file_content)
-
-    detected = mocker.Mock(encoding = "cp1250")
-
-    mock_from_bytes = mocker.patch("imgw_hydro_tools.reader.from_bytes")
-    mock_from_bytes.return_value.best.return_value = detected
-
-    assert reader._get_encoding(source_path) == "cp1250"
-    mock_from_bytes.assert_called_once_with(file_content)
-
-
-# _get_dialect tests
-def test_get_dialect_raises_value_error_when_dialect_cannot_be_determined(tmp_path, mocker):
-    file_content = "any test content"
-    source_path = tmp_path / "data.csv"
-    source_path.write_text(file_content, encoding="utf-8")
-
-    mocker.patch.object(reader.csv.Sniffer, "sniff", side_effect=reader.csv.Error())
-    
-    with pytest.raises(ValueError, match="Could not detect CSV dialect"):
-        reader._get_dialect(source_path)
-
-
-def test_get_dialect_returns_detected_dialect(typical_csv_semicolon_utf8):
-    dialect = reader._get_dialect(typical_csv_semicolon_utf8) 
-    assert dialect.delimiter == ";"
-
-
-def test_get_dialect_returns_detected_dialect_in_nested_csv(nested_csv_comma_cp1250):
-    dialect = reader._get_dialect(nested_csv_comma_cp1250, encoding="cp1250") 
-    assert dialect.delimiter == ","
-
-
-# _parse_nested_csv tests
-def test_parse_nested_csv_returns_unpacked_dataframe(nested_csv_comma_cp1250):
-
-    expected_df =  pd.DataFrame([
-            ["150170040", "OŁAWA", "Odra (1)", "2023", "01", "01", "185", "99999.999", "99.9", "11"],
-            ["150170040", "OŁAWA", "Odra (1)", "2023", "01", "02", "188", "99999.999", "99.9", "11"],
-            ["150170040", "OŁAWA", "Odra (1)", "2023", "01", "03", "188", "99999.999", "99.9", "11"],
-            ["149180020", "CHAŁUPKI", "Odra (1)", "2024", "01", "01", "113", "25.400", "", "11"],
-            ["149180020", "CHAŁUPKI", "Odra (1)", "2024", "01", "02", "109", "23.300", "", "11"],
-            ["149180020", "CHAŁUPKI", "Odra (1)", "2024", "01", "03", "120", "30.000", "", "11"]
+def df_raw():
+    df_raw = pd.DataFrame(
+        [
+            ["150190340", "KRAKÓW-BIELANY", "Wisła (2)", "2023", "09", "01", "9999", "99999.999", "99.9", "07"],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła 2", "2023", "09", "02", "NULL", "NULL", "NULL", "07"],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła ()", "2023", "09", "03", "", "", "", "07"],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła", "2023", "09", "04", "150", "200", "19", "07"]
         ],
         dtype="string"
     )
-
-    result = reader._parse_nested_csv(nested_csv_comma_cp1250, encoding="cp1250")
-    pd.testing.assert_frame_equal(result, expected_df)
+    return df_raw
 
 
-###############################################################################
-## PRELIMINARY CLEANING DATAFRAME
-###############################################################################
-
-
-# _extract_river_code tests
-def test_extract_river_code():
-    river_code_df = pd.DataFrame(
+@pytest.fixture
+def df_with_column_names():
+    df_with_column_names = pd.DataFrame(
         [
-            ["150190340","KRAKÓW-BIELANY","Wisła (2)","2020","09","01","200","99999.999","99.9","07"],
-            ["150190340","KRAKÓW-BIELANY","Wisła 2","2020","09","02",'178',"99999.999","99.9","07"],
-            ["150190340","KRAKÓW-BIELANY","Wisła ()","2020","09","03",'202',"99999.999","99.9","07"],
-            ["150190340","KRAKÓW-BIELANY","Wisła","2020","09","04",'183',"99999.999","99.9","07"],
-            ["154220060","OLECKO","Jez. Olecko Wielkie (2626139)","2020","09","01",'241',"99999.999","99.9","07"],
-            ["154220060","OLECKO","Jez. Olecko Wielkie 2626139","2020","09","02",'241',"99999.999","99.9","07"],
-            ["154220060","OLECKO","Jez. Olecko Wielkie ()","2020","09","03",'240',"99999.999","99.9","07"],
-            ["154220060","OLECKO","Jez. Olecko Wielkie","2020","09","04",'239',"99999.999","99.9","07"]
+            ["150190340", "KRAKÓW-BIELANY", "Wisła (2)", "2023", "09", "01", "9999", "99999.999", "99.9", "07"],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła 2", "2023", "09", "02", "NULL", "NULL", "NULL", "07"],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła ()", "2023", "09", "03", "", "", "", "07"],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła", "2023", "09", "04", "150", "200", "19", "07"]
         ],
+        dtype="string",
         columns=["PSKDSZS", "PSNZWP", "KDNRZK", "COROKH", "COMSCH", "CODZIEN", "COSTAN", "COPRZP", "COPTMP", "COMSCK"]
     )
-
-    expected_result = pd.DataFrame(
-        [
-            ["150190340","KRAKÓW-BIELANY","Wisła","2020","09","01","200","99999.999","99.9","07", "2"],
-            ["150190340","KRAKÓW-BIELANY","Wisła 2","2020","09","02",'178',"99999.999","99.9","07", np.nan],
-            ["150190340","KRAKÓW-BIELANY","Wisła ()","2020","09","03",'202',"99999.999","99.9","07", np.nan],
-            ["150190340","KRAKÓW-BIELANY","Wisła","2020","09","04",'183',"99999.999","99.9","07", np.nan],
-            ["154220060","OLECKO","Jez. Olecko Wielkie","2020","09","01",'241',"99999.999","99.9","07", "2626139"],
-            ["154220060","OLECKO","Jez. Olecko Wielkie 2626139","2020","09","02",'241',"99999.999","99.9","07", np.nan],
-            ["154220060","OLECKO","Jez. Olecko Wielkie ()","2020","09","03",'240',"99999.999","99.9","07", np.nan],
-            ["154220060","OLECKO","Jez. Olecko Wielkie","2020","09","04",'239',"99999.999","99.9","07", np.nan]
-        ],
-        columns=["PSKDSZS", "PSNZWP", "KDNRZK", "COROKH", "COMSCH", "CODZIEN", "COSTAN", "COPRZP", "COPTMP", "COMSCK", "KDKRZK"]
-    )
-
-    reader._extract_river_code(river_code_df)
-    pd.testing.assert_frame_equal(river_code_df, expected_result)
+    return df_with_column_names
 
 
-# _set_column_dtypes tests
 @pytest.fixture
-def dtypes_df():
-    return pd.DataFrame(
+def df_with_river_code():
+    df_with_river_code = pd.DataFrame(
         [
-            ["150190340","KRAKÓW-BIELANY","Wisła","2020","09","01","200","99999.999","NA","07", "2"],
-            ["150190340","KRAKÓW-BIELANY","Wisła 2","2020","09","02",'178',"99999.999","99.9","07", np.nan],
-            ["150190340","KRAKÓW-BIELANY","Wisła ()","2020","09","03",'202',"99999.999","missing","07", np.nan],
-            ["150190340","KRAKÓW-BIELANY","Wisła","2020","09","04",'183',"99999.999","99.9","07", np.nan],
-            ["154220060","OLECKO","Jez. Olecko Wielkie","2020","09","01",'241',"99999.999","","07", "2626139"],
-            ["154220060","OLECKO","Jez. Olecko Wielkie 2626139","2020","09","02",'241',"99999.999","99.9","07", np.nan],
-            ["154220060","OLECKO","Jez. Olecko Wielkie ()","2020","09","03",'240',"99999.999","99.9","07", np.nan],
-            ["154220060","OLECKO","Jez. Olecko Wielkie","2020","09","04",'239',"99999.999","99.9","07", np.nan]
+            ["150190340", "KRAKÓW-BIELANY", "Wisła", "2023", "09", "01", "9999", "99999.999", "99.9", "07", "2"],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła 2", "2023", "09", "02", "NULL", "NULL", "NULL", "07", pd.NA],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła ()", "2023", "09", "03", "", "", "", "07", pd.NA],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła", "2023", "09", "04", "150", "200", "19", "07", pd.NA]
+        ],
+        dtype="string",
+        columns=["PSKDSZS", "PSNZWP", "KDNRZK", "COROKH", "COMSCH", "CODZIEN", "COSTAN", "COPRZP", "COPTMP", "COMSCK", "KDKRZK"]
+    )
+    return df_with_river_code
+
+
+@pytest.fixture
+def df_with_numeric_types():
+    df_with_numeric_types = pd.DataFrame(
+        [
+            ["150190340", "KRAKÓW-BIELANY", "Wisła", 2023, 9, 1, 9999, 99999.999, 99.9, 7, "2"],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła 2", 2023, 9, 2, pd.NA, pd.NA, pd.NA, 7, pd.NA],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła ()", 2023, 9, 3, pd.NA, pd.NA, pd.NA, 7, pd.NA],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła", 2023, 9, 4, 150, 200, 19, 7, pd.NA]
         ],
         columns=["PSKDSZS", "PSNZWP", "KDNRZK", "COROKH", "COMSCH", "CODZIEN", "COSTAN", "COPRZP", "COPTMP", "COMSCK", "KDKRZK"]
     )
 
+    df_with_numeric_types = df_with_numeric_types.astype(
+        {
+            "PSKDSZS": "string",
+            "PSNZWP": "string",
+            "KDNRZK": "string",
+            "COROKH": "Int64",
+            "COMSCH": "Int64",
+            "CODZIEN": "Int64",
+            "COSTAN": "Float64",
+            "COPRZP": "Float64",
+            "COPTMP": "Float64",
+            "COMSCK": "Int64",
+            "KDKRZK": "string",
+        }
+    )
 
-def test_set_column_dtypes_converts_numeric_columns(dtypes_df):
-    reader._set_column_dtypes(dtypes_df)
-
-    numeric_columns = reader.NUMERIC_COLUMNS
-    for column in numeric_columns:
-        assert is_numeric_dtype(dtypes_df[column])
-
-
-def test_set_column_dtypes_preserves_non_numeric_columns(dtypes_df):
-    non_numeric_columns = [column 
-                           for column in dtypes_df.columns 
-                           if column not in reader.NUMERIC_COLUMNS]
-
-    expected_df = dtypes_df[non_numeric_columns].copy()
-    
-    reader._set_column_dtypes(dtypes_df)
-    pd.testing.assert_frame_equal(dtypes_df[non_numeric_columns], expected_df)
-
-
-def test_set_column_dtypes_coerces_invalid_values_to_nan(dtypes_df):
-    reader._set_column_dtypes(dtypes_df)
-
-    assert pd.isna(dtypes_df.loc[0, "COPTMP"])
-    assert pd.isna(dtypes_df.loc[2, "COPTMP"])
-    assert pd.isna(dtypes_df.loc[4, "COPTMP"])
+    return df_with_numeric_types
 
 
-def test_set_column_dtypes_preserves_numeric_sentinel_values(dtypes_df):
-    reader._set_column_dtypes(dtypes_df)
+@pytest.fixture
+def df_normalized():
+    df_normalized = pd.DataFrame(
+        [
+            ["150190340", "KRAKÓW-BIELANY", "Wisła", 2023, 9, 1, pd.NA, pd.NA, pd.NA, 7, "2"],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła 2", 2023, 9, 2, pd.NA, pd.NA, pd.NA, 7, pd.NA],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła ()", 2023, 9, 3, pd.NA, pd.NA, pd.NA, 7, pd.NA],
+            ["150190340", "KRAKÓW-BIELANY", "Wisła", 2023, 9, 4, 150, 200, 19, 7, pd.NA]
+        ],
+        columns=["PSKDSZS", "PSNZWP", "KDNRZK", "COROKH", "COMSCH", "CODZIEN", "COSTAN", "COPRZP", "COPTMP", "COMSCK", "KDKRZK"]
+    )
 
-    assert dtypes_df.loc[0, "COPRZP"] == 99999.999
-    assert dtypes_df.loc[1, "COPTMP"] == 99.9
+    df_normalized = df_normalized.astype(
+        {
+            "PSKDSZS": "string",
+            "PSNZWP": "string",
+            "KDNRZK": "string",
+            "COROKH": "Int64",
+            "COMSCH": "Int64",
+            "CODZIEN": "Int64",
+            "COSTAN": "Float64",
+            "COPRZP": "Float64",
+            "COPTMP": "Float64",
+            "COMSCK": "Int64",
+            "KDKRZK": "string",
+        }
+    )
+    return df_normalized
 
 
-###############################################################################
-## TEST PUBLIC FUNCTION
-###############################################################################
+# _get_file_encoding
+def test_get_file_encoding_raises_value_error_when_encoding_cannot_be_determined(csv_comma_cp1250, mocker):
+    mock_from_bytes = mocker.patch.object(reader, "from_bytes")
+    mock_from_bytes.return_value.best.return_value = None
+
+    with pytest.raises(ValueError):
+        reader._get_file_encoding(csv_comma_cp1250)
+
+    mock_from_bytes.assert_called_once_with(csv_comma_cp1250.read_bytes())
 
 
-# read_imgw_data tests
-def test_read_imgw_data_reads_comma_csv(typical_csv_comma_cp1250, expected_result):
-    result = reader.read_imgw_data(typical_csv_comma_cp1250)
-    pd.testing.assert_frame_equal(result, expected_result, check_dtype=False)
+def test_get_file_encoding_returns_detected_encoding(csv_comma_cp1250, mocker):
+    mock_from_bytes = mocker.patch.object(reader, "from_bytes")
+    mock_from_bytes.return_value.best.return_value = mocker.Mock(encoding = "cp1250")
+
+    assert reader._get_file_encoding(csv_comma_cp1250) == "cp1250"
+    mock_from_bytes.assert_called_once_with(csv_comma_cp1250.read_bytes())
 
 
-def test_read_imgw_data_reads_semicolon_csv(typical_csv_semicolon_utf8, expected_result):
-    result = reader.read_imgw_data(typical_csv_semicolon_utf8)
-    pd.testing.assert_frame_equal(result, expected_result, check_dtype=False)
+# _get_csv_delimiter
+def test_get_csv_delimiter_raises_value_error_when_dialect_cannot_be_determined(csv_semicolon_utf8, mocker):
+    mocker.patch.object(reader.csv.Sniffer, "sniff", side_effect=reader.csv.Error())    
+    with pytest.raises(ValueError):
+        reader._get_csv_delimiter(csv_semicolon_utf8, "utf-8")
 
 
-def test_read_imgw_data_reads_nested_csv(nested_csv_comma_cp1250, expected_result):
-    result = reader.read_imgw_data(nested_csv_comma_cp1250)
-    pd.testing.assert_frame_equal(result, expected_result, check_dtype=False)
+def test_get_csv_delimiter_returns_detected_delimiter(csv_semicolon_utf8):
+    delimiter = reader._get_csv_delimiter(csv_semicolon_utf8, "utf-8") 
+    assert delimiter == ";"
+
+
+def test_get_csv_delimiter_returns_detected_dialect_in_nested_csv(csv_comma_cp1250_nested):
+    delimiter = reader._get_csv_delimiter(csv_comma_cp1250_nested, "cp1250") 
+    assert delimiter == ","
+
+
+# _read_raw_data
+def test_read_raw_data_returns_dataframe(csv_comma_cp1250, df_raw):
+    result = reader._read_raw_data(csv_comma_cp1250, "cp1250", ",")
+    pd.testing.assert_frame_equal(result, df_raw)
+
+
+# _parse_nested_csv
+def test_parse_nested_csv_returns_unpacked_dataframe(csv_comma_cp1250_nested, df_raw):
+    result = reader._parse_nested_csv(csv_comma_cp1250_nested, "cp1250")
+    pd.testing.assert_frame_equal(result, df_raw)
+
+
+# _set_column_names
+def test_set_column_names_returns_df_with_column_names(df_raw, df_with_column_names):
+    result = reader._set_column_names(df_raw)
+    pd.testing.assert_frame_equal(result, df_with_column_names)
+
+
+# _extract_river_code
+def test_extract_river_code_returns_expected_dataframe(df_with_column_names, df_with_river_code):
+    result = reader._extract_river_code(df_with_column_names)
+    pd.testing.assert_frame_equal(result, df_with_river_code)
+
+
+# _convert_numeric_columns
+def test_convert_numeric_columns_returns_expected_dataframe(df_with_river_code, df_with_numeric_types):
+    result = reader._convert_numeric_columns(df_with_river_code)
+    pd.testing.assert_frame_equal(result, df_with_numeric_types)
+
+
+# _normalize_missing_data
+def test_normalize_missing_data_converts_sentinels_to_nan(df_with_numeric_types, df_normalized):
+    result = reader._normalize_missing_data(df_with_numeric_types)
+    pd.testing.assert_frame_equal(result, df_normalized)
+
+
+# Public API - read_imgw_data
+def test_read_imgw_data_reads_comma_csv(csv_comma_cp1250, df_normalized):
+    result = reader.read_imgw_data(csv_comma_cp1250)
+    pd.testing.assert_frame_equal(result, df_normalized)
+
+
+def test_read_imgw_data_reads_semicolon_csv(csv_semicolon_utf8, df_normalized):
+    result = reader.read_imgw_data(csv_semicolon_utf8)
+    pd.testing.assert_frame_equal(result, df_normalized)
+
+
+def test_read_imgw_data_reads_nested_csv(csv_comma_cp1250_nested, df_normalized):
+    result = reader.read_imgw_data(csv_comma_cp1250_nested)
+    pd.testing.assert_frame_equal(result, df_normalized)
+
+
+def test_read_imgw_data_does_not_detect_encoding_when_provided(csv_comma_cp1250, mocker):
+    mock_encoding = mocker.patch.object(reader, "_get_file_encoding")
+    mock_delimiter = mocker.patch.object(reader, "_get_csv_delimiter", return_value=",")
+
+    reader.read_imgw_data(csv_comma_cp1250, encoding="cp1250")
+
+    mock_encoding.assert_not_called()
+    mock_delimiter.assert_called_once_with(csv_comma_cp1250, "cp1250")
+
+
+def test_read_imgw_data_does_not_detect_delimiter_when_provided(csv_comma_cp1250, mocker):
+    mock_encoding = mocker.patch.object(reader, "_get_file_encoding", return_value="cp1250")
+    mock_delimiter = mocker.patch.object(reader, "_get_csv_delimiter")
+
+    reader.read_imgw_data(csv_comma_cp1250, delimiter=",")
+
+    mock_encoding.assert_called_once_with(csv_comma_cp1250)
+    mock_delimiter.assert_not_called()
+
+
+def test_read_imgw_data_does_not_detect_delimiter_and_encoding_when_provided(csv_comma_cp1250, mocker):
+    mock_encoding = mocker.patch.object(reader, "_get_file_encoding")
+    mock_delimiter = mocker.patch.object(reader, "_get_csv_delimiter")
+
+    reader.read_imgw_data(csv_comma_cp1250, encoding="cp1250", delimiter=",")
+
+    mock_encoding.assert_not_called()
+    mock_delimiter.assert_not_called()
+
+
+def test_read_imgw_data_detects_delimiter_and_encoding_when_not_provided(csv_comma_cp1250, mocker):
+    mock_encoding = mocker.patch.object(reader, "_get_file_encoding", return_value="cp1250")
+    mock_delimiter = mocker.patch.object(reader, "_get_csv_delimiter", return_value=",")
+
+    reader.read_imgw_data(csv_comma_cp1250)
+
+    mock_encoding.assert_called_once_with(csv_comma_cp1250)
+    mock_delimiter.assert_called_once_with(csv_comma_cp1250, "cp1250")
