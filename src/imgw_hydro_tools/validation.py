@@ -2,6 +2,7 @@ import pandas as pd
 
 
 DATE_COLUMNS = ["COROKH", "COMSCH", "CODZIEN", "COMSCK"]
+OBSERVATION_KEY = ["PSKDSZS", "COROKH", "COMSCK", "CODZIEN"]
 
 
 def find_invalid_dates(df: pd.DataFrame) -> pd.Series:
@@ -59,3 +60,40 @@ def find_invalid_dates(df: pd.DataFrame) -> pd.Series:
     is_invalid[is_invalid_comsch | is_invalid_date | is_misaligned] = True
 
     return is_invalid
+
+
+def find_duplicate_observations(df: pd.DataFrame) -> pd.Series:
+    """
+    Identify duplicate IMGW observations for the same station and date.
+
+    A row is considered a duplicate if another row has the same station code,
+    hydrological year, calendar month, and day. Measurement values are not
+    considered when identifying duplicate observations.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Data containing the IMGW observation key columns ``PSKDSZS``,
+        ``COROKH``, ``COMSCK``, and ``CODZIEN``.
+
+    Returns
+    -------
+    pandas.Series
+        Boolean mask aligned with ``df.index``. ``True`` indicates a duplicate
+        observation and ``False`` a unique observation.
+
+    Raises
+    ------
+    KeyError
+        If any required observation key column is missing from the DataFrame.
+    """
+    
+    missing_columns = [column for column in OBSERVATION_KEY if column not in df.columns]
+    if missing_columns:
+        raise KeyError(f"Required columns are missing: {', '.join(missing_columns)}")
+
+    is_duplicate = df.duplicated(subset=OBSERVATION_KEY, keep=False)
+    has_na_key = df[OBSERVATION_KEY].isna().any(axis=1)
+    is_duplicate[has_na_key] = False
+
+    return is_duplicate
