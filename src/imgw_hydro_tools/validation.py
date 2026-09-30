@@ -3,6 +3,7 @@ import pandas as pd
 
 DATE_COLUMNS = ["COROKH", "COMSCH", "CODZIEN", "COMSCK"]
 OBSERVATION_KEY = ["PSKDSZS", "COROKH", "COMSCK", "CODZIEN"]
+OBSERVATION_COLUMNS = ["COSTAN", "COPRZP", "COPTMP"]
 
 
 def find_invalid_dates(df: pd.DataFrame) -> pd.Series:
@@ -97,3 +98,38 @@ def find_duplicate_observations(df: pd.DataFrame) -> pd.Series:
     is_duplicate[has_na_key] = False
 
     return is_duplicate
+
+
+def find_missing_observations(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Identify missing IMGW measurement observations.
+
+    A measurement is considered missing if its value is missing in any of the
+    IMGW measurement columns ``COSTAN``, ``COPRZP``, or ``COPTMP``.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Data containing the IMGW measurement columns ``COSTAN``, ``COPRZP``,
+        and ``COPTMP``.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Boolean DataFrame aligned with ``df.index`` and containing the
+        measurement columns ``COSTAN``, ``COPRZP``, and ``COPTMP``.
+        ``True`` indicates a missing observation and ``False`` a present
+        observation.
+
+    Raises
+    ------
+    KeyError
+        If any required measurement column is missing from the DataFrame.
+    """
+
+    missing_columns = [column for column in OBSERVATION_COLUMNS if column not in df.columns]
+    if missing_columns:
+        raise KeyError(f"Required columns are missing: {', '.join(missing_columns)}")
+
+    return df[OBSERVATION_COLUMNS].isna()
+
