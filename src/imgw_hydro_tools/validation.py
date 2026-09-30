@@ -4,6 +4,7 @@ import pandas as pd
 DATE_COLUMNS = ["COROKH", "COMSCH", "CODZIEN", "COMSCK"]
 OBSERVATION_KEY = ["PSKDSZS", "COROKH", "COMSCK", "CODZIEN"]
 OBSERVATION_COLUMNS = ["COSTAN", "COPRZP", "COPTMP"]
+FLOW_OBSERVATION_COLUMN = "COPRZP"
 
 
 def find_invalid_dates(df: pd.DataFrame) -> pd.Series:
@@ -133,3 +134,37 @@ def find_missing_observations(df: pd.DataFrame) -> pd.DataFrame:
 
     return df[OBSERVATION_COLUMNS].isna()
 
+
+def find_negative_flows(df: pd.DataFrame) -> pd.Series:
+    """
+    Identify IMGW observations with negative flow values.
+
+    A flow observation is considered invalid if the value in ``COPRZP`` is
+    less than zero. Missing flow observations are not considered negative.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Data containing the IMGW flow measurement column ``COPRZP``.
+
+    Returns
+    -------
+    pandas.Series
+        Boolean mask aligned with ``df.index``. ``True`` indicates a negative
+        flow value and ``False`` a non-negative or missing flow value.
+
+    Raises
+    ------
+    KeyError
+        If the required ``COPRZP`` column is missing from the DataFrame.
+    """
+
+    if FLOW_OBSERVATION_COLUMN not in df.columns:
+        raise KeyError(f"Required column is missing: {FLOW_OBSERVATION_COLUMN}")
+
+    result = df[FLOW_OBSERVATION_COLUMN] < 0
+    result = result.fillna(False)
+    result = result.astype(bool)
+    result.name = None
+
+    return result
