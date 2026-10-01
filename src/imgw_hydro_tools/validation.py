@@ -168,3 +168,54 @@ def find_negative_flows(df: pd.DataFrame) -> pd.Series:
     result.name = None
 
     return result
+
+
+def validation_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Summarize IMGW data validation results.
+
+    The summary includes missing measurement counts and percentages for
+    ``COSTAN``, ``COPRZP``, and ``COPTMP``, as well as counts and percentages
+    of invalid dates, duplicate observations, and negative flow values.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Data containing the IMGW date, observation key, and measurement
+        columns required by the validation functions.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Validation summary containing ``category``, ``check``, ``count``,
+        and ``percent`` columns.
+
+    Raises
+    ------
+    KeyError
+        If any column required by the underlying validation checks is missing.
+    """
+
+    missing = find_missing_observations(df)
+    invalid_dates = find_invalid_dates(df)
+    duplicates = find_duplicate_observations(df)
+    negative_flows = find_negative_flows(df)
+
+    rows = [
+        ["missing", "COSTAN", missing["COSTAN"].sum()],
+        ["missing", "COPRZP", missing["COPRZP"].sum()],
+        ["missing", "COPTMP", missing["COPTMP"].sum()],
+        ["issues", "invalid_dates", invalid_dates.sum()],
+        ["issues", "duplicate_observations", duplicates.sum()],
+        ["issues", "negative_flows", negative_flows.sum()]
+    ]
+
+    summary = pd.DataFrame(
+        rows,
+        columns = ["category", "check", "count"]
+    )
+
+    total_rows = len(df)
+    summary["percent"] = summary["count"] / total_rows * 100
+    
+    return summary
